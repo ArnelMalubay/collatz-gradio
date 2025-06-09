@@ -21,7 +21,7 @@ def get_sequence(n):
     return sequence
 
 # This function creates an animation of the Collatz sequence branches and returns the file path to the saved animation.
-def animate_collatz_sequence(max_number = 1000, num_simultaneous = 50, max_slant_angle = 60, min_slant_angle = 5, colormap = 'Set1'):
+def animate_collatz_sequence(max_number, num_simultaneous, max_slant_angle, min_slant_angle, colormap):
     
     # Get the Collatz sequences for numbers from 1 to max_number
     branches = [get_sequence(i) for i in range(1, max_number + 1)]
@@ -85,7 +85,7 @@ def animate_collatz_sequence(max_number = 1000, num_simultaneous = 50, max_slant
                 if step_idx < len(branch) - 1:
                     frame_schedule.append((branch_idx, step_idx))
         # Pause after each group
-        frame_schedule += [(-1, -1)] * 0.1
+        frame_schedule += [(-1, -1)] 
 
     # This helper function updates the plot for each frame in the animation.
     def update(frame):
@@ -130,7 +130,7 @@ def animate_collatz_sequence(max_number = 1000, num_simultaneous = 50, max_slant
     temp_video = tempfile.NamedTemporaryFile(suffix = ".mp4", delete = False)
     writer = FFMpegWriter(fps = 45, bitrate = 1800)
 
-    ani.save(temp_video.name, writer = writer)
+    ani.save(temp_video.name, writer = writer, dpi = 100)
     plt.close(fig) 
 
     return temp_video.name
