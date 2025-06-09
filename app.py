@@ -1,129 +1,39 @@
-def get_sequence(n):
-    sequence = [n]
-    curr = n  
-    while curr != 1:
-        if curr % 2 == 0:
-            curr = curr // 2
-        else:
-            curr = 3 * curr + 1
-        sequence.append(curr)
-    sequence.reverse()
-    return sequence
+# This file is the main application file to host the application logic
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from matplotlib import colormaps
+# Importing gradio and the animate_collatz_sequence function from funcs.py
+import gradio as gr
+from funcs import animate_collatz_sequence
 
-# Assume get_sequence is defined externally
-branches = [get_sequence(i) for i in range(1, 101)]
+with gr.Blocks() as demo:
+    with gr.Row():
+        with gr.Column():
+            # Adding an application header 
+            gr.Markdown("""
+            <div style="text-align: center; font-size: 18px;">
+                <h1 style="font-size: 32px;">Collatz Branches Animator 🌌</h1>
+                <p>Use this interactive tool to generate animations of Collatz branches!</p>
+                <h3 style="font-size: 24px;">Instructions:</h3>
+                <ol style="display: inline-block; text-align: left; font-size: 18px;">
+                    <li><strong>Input the maximum number</strong> for which we compute the Collatz sequence.<code>c</code>.</li>
+                    <li><strong>Adjust the maximum number of branches</strong> to animate at once.</li>
+                    <li><strong>Adjust the slant angles</strong> to control how the branches move.</li>
+                    <li><strong>Choose a colormap</strong> to customize the appearance.</li>
+                    <li>Click <strong>"Generate Animation"</strong> to render the video.</li>
+                    <li>For more info, see this <a href="https://github.com/ArnelMalubay/collatz-gradio" target="_blank">GitHub repository</a>.</li>
+                </ol>
+            </div>
+            """)
+            # Adding all the interactive components of the application
+            max_number = gr.Slider(label = 'Specify the maximum number to use for the branches', minimum = 100, maximum = 3000, value = 500, step = 10, interactive = True)
+            num_simultaneous = gr.Slider(label = 'Specify the maximum number of branches to animate at once', minimum = 10, maximum = 100, value = 50, step = 10, interactive = True)
+            min_slant_angle = gr.Slider(label = 'Specify the minimum slant angle', minimum = 0, maximum = 45, value = 30, step = 5, interactive = True)
+            max_slant_angle = gr.Slider(label = 'Specify the maximum slant angle', minimum = 60, maximum = 90, value = 75, step = 5, interactive = True)
+            colormap_choices = ['Pastel1', 'Pastel2', 'Paired', 'Accent', 'Dark2', 'Set1', 'Set2', 'Set3', 'tab10', 'tab20', 'tab20b', 'tab20c']
+            colormap = gr.Dropdown(label = 'Choose colormap', choices = colormap_choices, value = 'Pastel1', interactive = True)
+            submit = gr.Button('Generate Animation', variant = 'huggingface')
+            
+        video = gr.Video(label = 'Collatz Branches Animation', format = 'mp4', width = 800, height = 1000, interactive = False)
 
-# Configurable parameters
-num_simultaneous = 5  # Number of branches to animate simultaneously
-max_slant_angle = np.pi / 2     # 60 degrees
-min_slant_angle = np.pi / 3             # 0 degrees
-line_length = 1.5
-animation_interval = 0.1          # milliseconds
-pause_duration = 1              # pause frames between branch groups
+    submit.click(fn = animate_collatz_sequence, inputs = [max_number, num_simultaneous, max_slant_angle, min_slant_angle, colormap], outputs = video)
 
-# Shared starting point
-start_pos = (0, 0)
-
-# Set up figure
-fig, ax = plt.subplots(figsize=(8, 10))
-ax.set_aspect('equal')
-ax.axis('off')
-
-# Determine dynamic limits based on all branches
-max_steps = max(len(branch) for branch in branches)
-x_margin = max_steps * line_length / 4
-y_margin = max_steps * line_length / 2
-ax.set_xlim(-x_margin, x_margin)
-ax.set_ylim(0, y_margin)
-
-# Total branches
-num_branches = len(branches)
-
-# Compute slant angles per branch
-slant_angles = np.linspace(max_slant_angle, min_slant_angle, num_branches)
-
-# Prepare positions for each branch
-positions = [[start_pos] for _ in branches]
-
-# === Color setup ===
-# Get base colormap with 20 distinct colors
-base_cmap = colormaps['Set1'].resampled(20)
-colors_pool = [base_cmap(i) for i in range(20)]
-
-# Pick num_simultaneous colors evenly spaced from the 20-color pool
-indices = np.linspace(0, 19, num_simultaneous, dtype=int)
-colors = [colors_pool[i] for i in indices]
-
-# Shuffle colors for maximal contrast (zig-zag from ends)
-shuffled_colors = []
-left, right = 0, num_simultaneous - 1
-toggle = True
-while left <= right:
-    if toggle:
-        shuffled_colors.append(colors[left])
-        left += 1
-    else:
-        shuffled_colors.append(colors[right])
-        right -= 1
-    toggle = not toggle
-
-# === Frame schedule generation ===
-frame_schedule = []
-for group_start in range(0, num_branches, num_simultaneous):
-    group_end = min(group_start + num_simultaneous, num_branches)
-    # For all branches in this group
-    max_branch_len = max(len(branches[i]) for i in range(group_start, group_end))
-    # For each step in branches in group
-    for step_idx in range(max_branch_len - 1):
-        for branch_idx in range(group_start, group_end):
-            branch = branches[branch_idx]
-            if step_idx < len(branch) - 1:
-                frame_schedule.append((branch_idx, step_idx))
-    # Pause after each group
-    frame_schedule += [(-1, -1)] * pause_duration
-
-def update(frame):
-    if frame >= len(frame_schedule):
-        return []
-
-    branch_idx, step_idx = frame_schedule[frame]
-    if branch_idx == -1:
-        return []  # Pause frame, no drawing
-
-    branch = branches[branch_idx]
-    slant_angle = slant_angles[branch_idx]
-    prev_x, prev_y = positions[branch_idx][-1]
-    next_val = branch[step_idx + 1]
-
-    # Direction based on parity: even = slant left, odd = slant right
-    angle = np.pi / 2 + slant_angle if next_val % 2 == 0 else np.pi / 2 - slant_angle
-    dx = line_length * np.cos(angle)
-    dy = line_length * np.sin(angle)
-    new_x, new_y = prev_x + dx, prev_y + dy
-
-    # Draw line segment
-    color_idx = branch_idx % num_simultaneous
-    color = shuffled_colors[color_idx]
-    ax.plot([prev_x, new_x], [prev_y, new_y], color=color, linewidth=2)
-
-    # Save new position
-    positions[branch_idx].append((new_x, new_y))
-
-    return []
-
-# Create animation
-ani = FuncAnimation(
-    fig,
-    update,
-    frames=len(frame_schedule),
-    interval=animation_interval,
-    blit=False,
-    repeat=False
-)
-
-plt.show()
+demo.launch()
