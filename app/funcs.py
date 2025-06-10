@@ -3,9 +3,9 @@
 # Importing necessary libraries
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 from matplotlib import colormaps
-import io
+import tempfile
 
 # This function generates the Collatz sequence for a given integer n. Results are reversed to start from 1 and end in n.
 def get_sequence(n):
@@ -126,10 +126,10 @@ def animate_collatz_sequence(max_number, num_simultaneous, max_slant_angle, min_
         blit = False,
         repeat = False
     )         
-
-    gif_buffer = io.BytesIO()
-    ani.save(gif_buffer, writer = PillowWriter(fps = 10), format = 'gif')
-    gif_buffer.seek(0)
-    plt.close(fig)
-
-    return gif_buffer
+    
+    # Save to a temp file instead of BytesIO
+    with tempfile.NamedTemporaryFile(delete = False, suffix = ".mp4") as tmpfile:
+        writer = FFMpegWriter(fps = 30, bitrate = 1800)
+        ani.save(tmpfile.name, writer = writer, dpi = 100)
+        plt.close(fig)
+        return tmpfile.name
