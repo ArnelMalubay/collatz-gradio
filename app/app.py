@@ -32,8 +32,8 @@ with gr.Blocks() as demo:
             colormap = gr.Dropdown(label = 'Choose colormap', choices = colormap_choices, value = 'Pastel1', interactive = True)
             submit = gr.Button('Generate Animation', variant = 'huggingface')
             
-        video = gr.Video(label = 'Collatz Branches Animation', format = 'mp4', width = 800, height = 1000, interactive = False)
+        image = gr.Image(label = 'Collatz Branches Animation', format = 'gif', width = 800, height = 1000, interactive = False)
 
-    submit.click(fn = animate_collatz_sequence, inputs = [max_number, num_simultaneous, max_slant_angle, min_slant_angle, colormap], outputs = video)
+    submit.click(fn = animate_collatz_sequence, inputs = [max_number, num_simultaneous, max_slant_angle, min_slant_angle, colormap], outputs = image)
 
 demo.launch()
