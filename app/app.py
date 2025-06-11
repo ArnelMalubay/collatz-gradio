@@ -36,4 +36,5 @@ with gr.Blocks() as demo:
 
     submit.click(fn = animate_collatz_sequence, inputs = [max_number, num_simultaneous, max_slant_angle, min_slant_angle, colormap], outputs = video)
 
-demo.launch()
+# To launch the application at any IP address, we need to set server name to 0.0.0.0; server port is Gradio's default port 7860
+demo.launch(server_name = "0.0.0.0", server_port = 7860)
