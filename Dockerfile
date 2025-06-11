@@ -1,15 +1,24 @@
+# Use Python 3.13 slim as the base image
 FROM python:3.13-slim
 
-# Install dependencies (FFmpeg + basic tools)
-RUN apt-get update && apt-get install -y ffmpeg
+# Install ffmpeg and required dependencies
+RUN apt-get update && \
+    apt-get install -y ffmpeg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install Python packages
+# Set the working directory
+WORKDIR /app
+
+# Copy requirements and install
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Add your app files
-COPY . /app
-WORKDIR /app
+# Copy app folder
+COPY app/ .
 
-# Command to run your script or Gradio app
-CMD ["python", "main.py"]
+# Expose Gradio's default port
+EXPOSE 7860
+
+# Run the app
+CMD ["python", "app.py"]
