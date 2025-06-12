@@ -1,12 +1,6 @@
 # Use Python 3.13 slim as the base image
 FROM python:3.13-slim
 
-# Install ffmpeg and required dependencies
-RUN apt-get update && \
-    apt-get install -y ffmpeg && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
 # Set the working directory
 WORKDIR /app
 
