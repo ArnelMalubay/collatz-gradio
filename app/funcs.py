@@ -3,14 +3,13 @@
 # Importing necessary libraries
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, FFMpegWriter
 from matplotlib import colormaps
 import tempfile
 
-# This function generates the Collatz sequence for a given integer n. Results are reversed to start from 1 and end in n.
+# Generate the Collatz sequence for a given n
 def get_sequence(n):
     sequence = [n]
-    curr = n  
+    curr = n
     while curr != 1:
         if curr % 2 == 0:
             curr = curr // 2
@@ -20,22 +19,23 @@ def get_sequence(n):
     sequence.reverse()
     return sequence
 
-# This function creates an animation of the Collatz sequence branches and returns the file path to the saved animation.
-def animate_collatz_sequence(max_number, num_simultaneous, max_slant_angle, min_slant_angle, colormap):
+# Draw all branches as a static plot and return the image file path
+def plot_collatz_sequence(max_number, slant_angle, fan_angle, colormap):
     
-    # Get the Collatz sequences for numbers from 1 to max_number
+    # Get all sequences
     branches = [get_sequence(i) for i in range(1, max_number + 1)]
+    num_branches = len(branches)
 
-    # Convert angles from degrees to radians    
-    max_slant_angle = np.radians(max_slant_angle)
-    min_slant_angle = np.radians(min_slant_angle)
+    # Convert angles to radians
+    slant_angle = np.radians(slant_angle)
+    fan_angle = np.radians(fan_angle)
     
     # Set up figure
     fig, ax = plt.subplots(figsize = (8, 10))
     ax.set_aspect('equal')
     ax.axis('off')
 
-    # Determine dynamic limits based on all branches
+    # Set line length and canvas limits
     line_length = 1.5
     max_steps = max(len(branch) for branch in branches)
     x_margin = max_steps * line_length / 4
@@ -43,93 +43,39 @@ def animate_collatz_sequence(max_number, num_simultaneous, max_slant_angle, min_
     ax.set_xlim(-x_margin, x_margin)
     ax.set_ylim(0, y_margin)
 
-    # Total branches
-    num_branches = len(branches)
+    # Slant angles for normal branching
+    slant_angles = np.linspace(-slant_angle, slant_angle, num_branches)
 
-    # Compute slant angles per branch
-    slant_angles = np.linspace(max_slant_angle, min_slant_angle, num_branches)
+    # Fan-out angle for first segment
+    fan_angles = np.linspace(-fan_angle, fan_angle, num_branches)
 
-    # Prepare positions for each branch
-    positions = [[(0, 0)] for _ in branches]
+    # Prepare colors from colormap
+    base_cmap = colormaps[colormap].resampled(num_branches)
+    colors = [base_cmap(i) for i in range(num_branches)]
 
-    # Color setup
-    base_cmap = colormaps[colormap].resampled(20)
-    colors_pool = [base_cmap(i) for i in range(20)]
-    
-    indices = np.linspace(0, 19, num_simultaneous, dtype = int)
-    colors = [colors_pool[i] for i in indices]
+    # Draw all branches
+    for i, branch in enumerate(branches):
+        x, y = 0, 0
+        positions = [(x, y)]
 
-    # Shuffle colors for maximal contrast (zig-zag from ends)
-    shuffled_colors = []
-    left, right = 0, num_simultaneous - 1
-    toggle = True
-    while left <= right:
-        if toggle:
-            shuffled_colors.append(colors[left])
-            left += 1
-        else:
-            shuffled_colors.append(colors[right])
-            right -= 1
-        toggle = not toggle
+        for j in range(len(branch) - 1):
+            next_val = branch[j + 1]
 
-    # Frame schedule generation
-    frame_schedule = []
-    for group_start in range(0, num_branches, num_simultaneous):
-        group_end = min(group_start + num_simultaneous, num_branches)
-        # For all branches in this group
-        max_branch_len = max(len(branches[i]) for i in range(group_start, group_end))
-        # For each step in branches in group
-        for step_idx in range(max_branch_len - 1):
-            for branch_idx in range(group_start, group_end):
-                branch = branches[branch_idx]
-                if step_idx < len(branch) - 1:
-                    frame_schedule.append((branch_idx, step_idx))
-        # Pause after each group
-        frame_schedule += [(-1, -1)] 
+            if j == 0:
+                angle = np.pi / 2 + fan_angles[i]
+            else:
+                angle = np.pi / 2 + slant_angles[i] if next_val % 2 == 0 else np.pi / 2 - slant_angles[i]
 
-    # This helper function updates the plot for each frame in the animation.
-    def update(frame):
-        if frame >= len(frame_schedule):
-            return []
+            dx = line_length * np.cos(angle)
+            dy = line_length * np.sin(angle)
+            x, y = x + dx, y + dy
+            positions.append((x, y))
 
-        branch_idx, step_idx = frame_schedule[frame]
-        if branch_idx == -1:
-            return []  # Pause frame, no drawing
+        xs, ys = zip(*positions)
+        ax.plot(xs, ys, color = colors[i], linewidth = 2)
 
-        branch = branches[branch_idx]
-        slant_angle = slant_angles[branch_idx]
-        prev_x, prev_y = positions[branch_idx][-1]
-        next_val = branch[step_idx + 1]
-
-        # Direction based on parity: even = slant left, odd = slant right
-        angle = np.pi / 2 + slant_angle if next_val % 2 == 0 else np.pi / 2 - slant_angle
-        dx = line_length * np.cos(angle)
-        dy = line_length * np.sin(angle)
-        new_x, new_y = prev_x + dx, prev_y + dy
-
-        # Draw line segment
-        color_idx = branch_idx % num_simultaneous
-        color = shuffled_colors[color_idx]
-        ax.plot([prev_x, new_x], [prev_y, new_y], color = color, linewidth = 2)
-
-        # Save new position
-        positions[branch_idx].append((new_x, new_y))
-
-        return []
-
-    # Create animation
-    ani = FuncAnimation(
-        fig,
-        update,
-        frames = len(frame_schedule),
-        interval = 0.1,
-        blit = False,
-        repeat = False
-    )         
-    
-    # Save to a temp file instead of BytesIO
-    with tempfile.NamedTemporaryFile(delete = False, suffix = ".mp4") as tmpfile:
-        writer = FFMpegWriter(fps = 30, bitrate = 1800)
-        ani.save(tmpfile.name, writer = writer, dpi = 100)
+    # Save to temp file
+    with tempfile.NamedTemporaryFile(delete = False, suffix = ".png") as tmpfile:
+        plt.savefig(tmpfile.name, bbox_inches = 'tight', dpi = 100)
         plt.close(fig)
         return tmpfile.name
