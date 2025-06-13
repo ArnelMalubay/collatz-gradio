@@ -20,7 +20,7 @@ def get_sequence(n):
     return sequence
 
 # Draw all branches as a static plot and return the image file path
-def plot_collatz_sequence(max_number, slant_angle, fan_angle, colormap):
+def plot_collatz_sequence(max_number, slant_angle, fan_angle, colormap, colorperiod):
     
     # Get all sequences
     branches = [get_sequence(i) for i in range(1, max_number + 1)]
@@ -50,8 +50,13 @@ def plot_collatz_sequence(max_number, slant_angle, fan_angle, colormap):
     fan_angles = np.linspace(-fan_angle, fan_angle, num_branches)
 
     # Prepare colors from colormap
-    base_cmap = colormaps[colormap].resampled(num_branches)
-    colors = [base_cmap(i) for i in range(num_branches)]
+    num_colors = num_branches // colorperiod
+    remainder = num_branches % colorperiod
+    base_cmap = colormaps[colormap].resampled(num_colors)
+    base_colors = [base_cmap(i) for i in range(num_colors)]
+    colors = base_colors * colorperiod
+    if remainder > 0:
+        colors += [base_cmap(i) for i in range(remainder)]  
 
     # Draw all branches
     for i, branch in enumerate(branches):
