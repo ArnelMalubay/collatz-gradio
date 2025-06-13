@@ -1,14 +1,3 @@
----
-title: Collatz Branches Visualizer
-emoji: 📚
-colorFrom: indigo
-colorTo: green
-sdk: docker
-pinned: false
-license: mit
-short_description: An app that visualizes number paths from the Collatz rule
----
-
 # Collatz Branches Visualizer using Gradio
 This is a Gradio app that visualizes the branches made by number paths when subjected to the Collatz rule. Given a natural number `n`, the Collatz rule returns `n/2` if `n` is even and `3n + 1` if `n` is odd.
 
